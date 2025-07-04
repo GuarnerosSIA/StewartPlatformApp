@@ -19,7 +19,12 @@ class MainWindow(QMainWindow):
     def moursePressEvent(self, e):
         self.label.setText("Mouse pressed")
     def mouseReleaseEvent(self, e):
-        self.label.setText("Mouse released")
+        if e.button() == Qt.LeftButton:
+            self.label.setText("Left mouse button released")
+        elif e.button() == Qt.RightButton:
+            self.label.setText("Right mouse button released")
+        elif e.button() == Qt.MiddleButton:
+            self.label.setText("Mouse button released")
     def mouseDoubleClickEvent(self, e):
         self.label.setText("Mouse double clicked")
 
