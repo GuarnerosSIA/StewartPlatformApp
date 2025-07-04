@@ -22,17 +22,21 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("My App")
 
-        widget = QCheckBox()
-        widget.setCheckState(Qt.Checked)
+        widget = QComboBox()
+        widget.addItems(["One", "Two", "Three"])
 
-        # For tristate: widget.setCheckState(Qt.PartiallyChecked)
-        # Or: widget.setTriState(True)
-        widget.stateChanged.connect(self.show_state)
+        # Sends the current index (position) of the selected item.
+        widget.currentIndexChanged.connect( self.index_changed )
+
+        # There is an alternate signal to send the text.
+        widget.currentTextChanged.connect( self.text_changed )
 
         self.setCentralWidget(widget)
 
-    def show_state(self, s):
-        print(s == Qt.Checked)
+    def index_changed(self, i): # i is an int
+        print(i)
+
+    def text_changed(self, s): # s is a str
         print(s)
 
 app = QApplication(sys.argv)
