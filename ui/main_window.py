@@ -79,12 +79,12 @@ class SerialApp_Stage1(QMainWindow):
         # Crear 4 canales
         for i in range(6):
             # Checkbox para habilitar canal
-            checkbox = QCheckBox(f"Motor {i}")
+            checkbox = QCheckBox(f"Motor {i+1}")
             checkbox.setChecked(True)
             
             # Slider
             slider = QSlider(Qt.Horizontal)
-            slider.setRange(0, 500)
+            slider.setRange(-255, 255)
             slider.setValue(0)
             slider.valueChanged.connect(lambda v, idx=i: self.on_channel_changed(idx, v))
             
@@ -213,8 +213,9 @@ class SerialApp_Stage1(QMainWindow):
 
     def send_all_values(self):
         """Enviar todos los valores"""
-        values = [int(slider.value()) for slider in self.sliders]
-        self.serial_comm.send_data(values)
+        values = [int(slider.value()+255) for slider in self.sliders]
+        values_received = self.serial_comm.send_data(values)
+        self.read_data.append(f"Recibidos: {values_received}")
         self.monitor.append(f"Enviando todos: {values}")
     
     def send_selected_values(self):
