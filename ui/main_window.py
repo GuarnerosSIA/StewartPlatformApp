@@ -16,27 +16,30 @@ from PyQt5.QtWidgets import (
 )
 
 class MainWindow(QMainWindow):
-
     def __init__(self):
         super().__init__()
 
         self.setWindowTitle("My App")
 
-        widget = QComboBox()
-        widget.addItems(["One", "Two", "Three"])
+        widget = QDoubleSpinBox()
+        # Or: widget = QSpinBox()
 
-        # Sends the current index (position) of the selected item.
-        widget.currentIndexChanged.connect( self.index_changed )
+        widget.setMinimum(1)
+        widget.setMaximum(9)
+        # Or: widget.setRange(1,9)
 
-        # There is an alternate signal to send the text.
-        widget.currentTextChanged.connect( self.text_changed )
+        widget.setPrefix("pos: ")
+        widget.setSuffix(" cm")
+        widget.setSingleStep(0.1)  # Or e.g. 0.5 for QDoubleSpinBox
+        widget.valueChanged.connect(self.value_changed)
+        widget.textChanged.connect(self.value_changed_str)
 
         self.setCentralWidget(widget)
 
-    def index_changed(self, i): # i is an int
+    def value_changed(self, i):
         print(i)
 
-    def text_changed(self, s): # s is a str
+    def value_changed_str(self, s):
         print(s)
 
 app = QApplication(sys.argv)
