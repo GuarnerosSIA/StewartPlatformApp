@@ -80,10 +80,10 @@ class SerialCommunicator(QObject):
                 data_to_send = ','.join(map(str, [255,255,255,255,255,255])) + '\n'
                 print(f"Enviando: {data_to_send}")
                 self.serial_port.write(data_to_send.encode('utf-8'))
-                time.sleep(0.1)
                 data_received = self.serial_port.readline()
-                print(f"Datos recibidos: {data_received}")
-                print(data_received.decode('utf-8'))
+                data_decode = data_received.decode('utf-8')
+                print(data_decode)
+                time.sleep(10)
                   # Pequeña pausa para no sobrecargar CPU
                 
             except Exception as e:
@@ -94,12 +94,20 @@ class SerialCommunicator(QObject):
         """Enviar datos por serial"""
         if self.is_connected and self.serial_port:
             try:
-                if isinstance(data, str):
-                    self.serial_port.write(data.encode())
-                else:
-                    self.serial_port.write(data)
+                for i in range(50):
+                    data_int = int(data)
+                    data_to_send = ','.join(map(str, [data_int,255,255,255,255,255])) + '\n'
+                    print(f"Enviando: {data_to_send}")
+                    self.serial_port.write(data_to_send.encode('utf-8'))
+                    data_received = self.serial_port.readline()
+                    data_decoded = data_received.decode('utf-8')
+                    print(data_decoded)
                 return True
             except Exception as e:
                 self.error_occurred.emit(f"Error enviando datos: {str(e)}")
                 return False
         return False
+    def send_single_value(self, value):
+        """Enviar un solo valor por serial"""
+        message = f"{value}\n"
+        return self.send_data(message.encode('utf-8'))

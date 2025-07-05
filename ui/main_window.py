@@ -1,14 +1,9 @@
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, 
                              QWidget, QLabel, QPushButton, QComboBox, 
-                             QTextEdit, QSpinBox, QHBoxLayout, QGroupBox)
+                             QTextEdit, QSpinBox, QHBoxLayout, QGroupBox, QSlider, QCheckBox)
 from PyQt5.QtCore import Qt
 from communication.serial_handler import SerialCommunicator
 import sys
-import serial
-import serial.tools.list_ports
-import threading
-import time
-from PyQt5.QtCore import QObject, pyqtSignal
 
 
 
@@ -28,7 +23,7 @@ class SerialApp_Stage1(QMainWindow):
         
     def init_ui(self):
         self.setWindowTitle('Etapa 1: Conexión Serial')
-        self.setGeometry(100, 100, 500, 300)
+        self.setGeometry(100, 100, 600, 400)
         
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -72,10 +67,49 @@ class SerialApp_Stage1(QMainWindow):
         self.status_label.setStyleSheet("color: red; font-weight: bold;")
         layout.addWidget(self.status_label)
         
+        # Envio de datos
+        send_group = QGroupBox("Enviar Datos")
+        send_layout = QVBoxLayout()
+
+        # Slider horizontal
+        slider_layout = QHBoxLayout()
+        self.value_slider = QSlider(Qt.Horizontal)
+        self.value_slider.setRange(0, 500)
+        self.value_slider.setValue(255)
+        self.value_slider.valueChanged.connect(self.on_slider_changed)
+        
+        self.value_label = QLabel("0")
+        self.value_label.setMinimumWidth(40)
+        self.value_label.setAlignment(Qt.AlignCenter)
+        
+        slider_layout.addWidget(QLabel("Valor:"))
+        slider_layout.addWidget(self.value_slider)
+        slider_layout.addWidget(self.value_label)
+        
+        # Botón de envío manual
+        self.send_btn = QPushButton("Enviar Valor")
+        self.send_btn.clicked.connect(self.send_current_value)
+        self.send_btn.setEnabled(False)
+        
+        # Checkbox para envío automático
+        self.auto_send_cb = QCheckBox("Envío automático")
+        self.auto_send_cb.stateChanged.connect(self.toggle_auto_send)
+        
+        send_layout.addLayout(slider_layout)
+        send_layout.addWidget(self.send_btn)
+        send_layout.addWidget(self.auto_send_cb)
+        
+        send_group.setLayout(send_layout)
+        layout.addWidget(send_group)
+
         # Monitor
         self.monitor = QTextEdit()
         self.monitor.setReadOnly(True)
         layout.addWidget(self.monitor)
+
+         # Grupo de conexión
+        read_group = QGroupBox("Lectura de Datos")
+        read_layout = QHBoxLayout()
         
         # Estado inicial
         self.disconnect_btn.setEnabled(False)
@@ -118,10 +152,36 @@ class SerialApp_Stage1(QMainWindow):
         self.status_label.setText("Desconectado")
         self.status_label.setStyleSheet("color: red; font-weight: bold;")
         self.monitor.append("Desconectado")
+
+    def on_slider_changed(self, value):
+        """Cuando cambia el slider"""
+        self.value_label.setText(str(value))
+        
+        # Si está activado el envío automático, enviar inmediatamente
+        if self.auto_send_cb.isChecked():
+            self.send_current_value()
+    
+    def send_current_value(self):
+        """Enviar el valor actual del slider"""
+        value = self.value_slider.value()
+        self.serial_comm.send_single_value(value)
+    
+    def toggle_auto_send(self, state):
+        """Alternar envío automático"""
+        if state == Qt.Checked:
+            self.send_btn.setEnabled(False)
+            self.monitor.append("Envío automático activado")
+        else:
+            self.send_btn.setEnabled(True)
+            self.monitor.append("Envío automático desactivado")
     
     def on_data_received(self, data):
         """Cuando se reciben datos"""
         self.monitor.append(f"Recibido: {data}")
+    
+    def on_data_sent(self, data):
+        """Cuando se envían datos"""
+        self.monitor.append(f"Enviado: {data.strip()}")
     
     def on_error(self, error_msg):
         """Cuando ocurre un error"""
