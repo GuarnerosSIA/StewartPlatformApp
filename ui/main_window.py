@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, 
                              QWidget, QLabel, QPushButton, QComboBox, 
-                             QTextEdit, QSpinBox, QHBoxLayout, QGroupBox, QSlider, QCheckBox)
+                             QTextEdit, QSpinBox, QHBoxLayout, QGroupBox, 
+                             QSlider, QCheckBox, QGridLayout)
 from PyQt5.QtCore import Qt
 from communication.serial_handler import SerialCommunicator
 import sys
@@ -67,36 +68,63 @@ class SerialApp_Stage1(QMainWindow):
         self.status_label.setStyleSheet("color: red; font-weight: bold;")
         layout.addWidget(self.status_label)
         
-        # Envio de datos
-        send_group = QGroupBox("Enviar Datos")
-        send_layout = QVBoxLayout()
-
-        # Slider horizontal
-        slider_layout = QHBoxLayout()
-        self.value_slider = QSlider(Qt.Horizontal)
-        self.value_slider.setRange(0, 500)
-        self.value_slider.setValue(255)
-        self.value_slider.valueChanged.connect(self.on_slider_changed)
+        # NUEVO: Grupo de múltiples canales
+        channels_group = QGroupBox("Control de Canales")
+        channels_layout = QGridLayout()
         
-        self.value_label = QLabel("0")
-        self.value_label.setMinimumWidth(40)
-        self.value_label.setAlignment(Qt.AlignCenter)
+        self.sliders = []
+        self.labels = []
+        self.checkboxes = []
         
-        slider_layout.addWidget(QLabel("Valor:"))
-        slider_layout.addWidget(self.value_slider)
-        slider_layout.addWidget(self.value_label)
+        # Crear 4 canales
+        for i in range(6):
+            # Checkbox para habilitar canal
+            checkbox = QCheckBox(f"Motor {i}")
+            checkbox.setChecked(True)
+            
+            # Slider
+            slider = QSlider(Qt.Horizontal)
+            slider.setRange(0, 500)
+            slider.setValue(0)
+            slider.valueChanged.connect(lambda v, idx=i: self.on_channel_changed(idx, v))
+            
+            # Label con valor
+            label = QLabel("0")
+            label.setMinimumWidth(40)
+            label.setAlignment(Qt.AlignCenter)
+            
+            # Agregar a la grilla
+            channels_layout.addWidget(checkbox, i, 0)
+            channels_layout.addWidget(slider, i, 1)
+            channels_layout.addWidget(label, i, 2)
+            
+            self.sliders.append(slider)
+            self.labels.append(label)
+            self.checkboxes.append(checkbox)
         
-        # Botón de envío manual
-        self.send_btn = QPushButton("Enviar Valor")
-        self.send_btn.clicked.connect(self.send_current_value)
-        self.send_btn.setEnabled(False)
+        channels_group.setLayout(channels_layout)
+        layout.addWidget(channels_group)
+        
+        # Grupo de controles de envío
+        send_group = QGroupBox("Controles de Envío")
+        send_layout = QHBoxLayout()
+        
+        # Botones de envío
+        self.send_all_btn = QPushButton("Enviar Todos")
+        self.send_selected_btn = QPushButton("Enviar Seleccionados")
+        self.send_individual_btn = QPushButton("Envío Individual")
+        
+        self.send_all_btn.clicked.connect(self.send_all_values)
+        self.send_selected_btn.clicked.connect(self.send_selected_values)
+        self.send_individual_btn.clicked.connect(self.toggle_individual_send)
         
         # Checkbox para envío automático
         self.auto_send_cb = QCheckBox("Envío automático")
         self.auto_send_cb.stateChanged.connect(self.toggle_auto_send)
         
-        send_layout.addLayout(slider_layout)
-        send_layout.addWidget(self.send_btn)
+        send_layout.addWidget(self.send_all_btn)
+        send_layout.addWidget(self.send_selected_btn)
+        send_layout.addWidget(self.send_individual_btn)
         send_layout.addWidget(self.auto_send_cb)
         
         send_group.setLayout(send_layout)
@@ -169,6 +197,38 @@ class SerialApp_Stage1(QMainWindow):
         # Si está activado el envío automático, enviar inmediatamente
         if self.auto_send_cb.isChecked():
             self.send_current_value()
+
+    def on_channel_changed(self, channel, value):
+        """Cuando cambia un canal"""
+        self.labels[channel].setText(str(value))
+        
+        # Si está en modo envío automático, enviar
+        if self.auto_send_cb.isChecked():
+            if self.individual_send_mode:
+                # Enviar solo este canal
+                self.serial_comm.send_channel_value(channel, value)
+            else:
+                # Enviar todos los seleccionados
+                self.send_selected_values()
+
+    def send_all_values(self):
+        """Enviar todos los valores"""
+        values = [int(slider.value()) for slider in self.sliders]
+        self.serial_comm.send_data(values)
+        self.monitor.append(f"Enviando todos: {values}")
+    
+    def send_selected_values(self):
+        """Enviar solo los canales seleccionados"""
+        selected_values = []
+        for i, checkbox in enumerate(self.checkboxes):
+            if checkbox.isChecked():
+                selected_values.append(self.sliders[i].value())
+        
+        if selected_values:
+            self.serial_comm.send_multiple_values(selected_values)
+            self.monitor.append(f"Enviando seleccionados: {selected_values}")
+        else:
+            self.monitor.append("No hay canales seleccionados")
     
     def send_current_value(self):
         """Enviar el valor actual del slider"""
@@ -176,6 +236,19 @@ class SerialApp_Stage1(QMainWindow):
         values_received = self.serial_comm.send_single_value(value)
         self.read_data.append(f"Enviado: {values_received}")
     
+    def toggle_individual_send(self):
+        """Alternar modo de envío individual"""
+        self.individual_send_mode = not self.individual_send_mode
+        
+        if self.individual_send_mode:
+            self.send_individual_btn.setText("Envío Individual ✓")
+            self.send_individual_btn.setStyleSheet("background-color: lightgreen;")
+            self.monitor.append("Modo envío individual activado")
+        else:
+            self.send_individual_btn.setText("Envío Individual")
+            self.send_individual_btn.setStyleSheet("")
+            self.monitor.append("Modo envío individual desactivado")
+
     def toggle_auto_send(self, state):
         """Alternar envío automático"""
         if state == Qt.Checked:

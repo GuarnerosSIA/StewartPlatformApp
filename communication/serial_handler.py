@@ -95,8 +95,7 @@ class SerialCommunicator(QObject):
         if self.is_connected and self.serial_port:
             try:
                 for i in range(50):
-                    data_int = int(data)
-                    data_to_send = ','.join(map(str, [data_int,255,255,255,255,255])) + '\n'
+                    data_to_send = ','.join(map(str, data)) + '\n'
                     print(f"Enviando: {data_to_send}")
                     self.serial_port.write(data_to_send.encode('utf-8'))
                     data_received = self.serial_port.readline()
@@ -108,7 +107,22 @@ class SerialCommunicator(QObject):
                 self.error_occurred.emit(f"Error enviando datos: {str(e)}")
                 return ['-1', '-1', '-1', '-1', '-1', '-1']
         return False
+    
     def send_single_value(self, value):
         """Enviar un solo valor por serial"""
         message = f"{value}\n"
         return self.send_data(message.encode('utf-8'))
+
+    def send_multiple_values(self, values):
+        """Enviar múltiples valores"""
+        if len(values) > 6:
+            self.error_occurred.emit("Máximo 6 valores permitidos")
+            return False
+        
+        # Formato: M<cantidad><val1><val2>...<valN>\n
+        message = f"M{len(values):01d}"
+        for value in values:
+            message += f"{value:03d}"
+        message += "\n"
+        
+        return self.send_data(message)
