@@ -32,7 +32,7 @@ class SerialCommunicator(QObject):
             })
         return ports
     
-    def connect(self, port, baudrate=115200, timeout=1):
+    def connect(self, port, baudrate=250000, timeout=1):
         """Conectar al puerto serial"""
         try:
             if self.is_connected:
@@ -44,6 +44,7 @@ class SerialCommunicator(QObject):
                 timeout=timeout
             )
             
+            time.sleep(3)  # Esperar a que el puerto se estabilice
             self.is_connected = True
             self.stop_reading = False
             
@@ -76,12 +77,14 @@ class SerialCommunicator(QObject):
         """Bucle de lectura en hilo separado"""
         while not self.stop_reading and self.is_connected:
             try:
-                if self.serial_port and self.serial_port.in_waiting > 0:
-                    data = self.serial_port.readline().decode().strip()
-                    if data:
-                        self.data_received.emit(data)
-                        
-                time.sleep(0.01)  # Pequeña pausa para no sobrecargar CPU
+                data_to_send = ','.join(map(str, [255,255,255,255,255,255])) + '\n'
+                print(f"Enviando: {data_to_send}")
+                self.serial_port.write(data_to_send.encode('utf-8'))
+                time.sleep(0.1)
+                data_received = self.serial_port.readline()
+                print(f"Datos recibidos: {data_received}")
+                print(data_received.decode('utf-8'))
+                  # Pequeña pausa para no sobrecargar CPU
                 
             except Exception as e:
                 self.error_occurred.emit(f"Error leyendo datos: {str(e)}")
