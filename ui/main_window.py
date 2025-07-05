@@ -102,14 +102,23 @@ class SerialApp_Stage1(QMainWindow):
         send_group.setLayout(send_layout)
         layout.addWidget(send_group)
 
+        # Grupo de conexión
+        read_group = QGroupBox("Lectura de Datos")
+        read_layout = QHBoxLayout()
+        self.read_data = QTextEdit()
+        self.read_data.setReadOnly(True)
+        read_layout.addWidget(self.read_data)
+        read_group.setLayout(read_layout)
+        layout.addWidget(read_group)
+
+        
         # Monitor
         self.monitor = QTextEdit()
         self.monitor.setReadOnly(True)
         layout.addWidget(self.monitor)
 
-         # Grupo de conexión
-        read_group = QGroupBox("Lectura de Datos")
-        read_layout = QHBoxLayout()
+         
+
         
         # Estado inicial
         self.disconnect_btn.setEnabled(False)
@@ -164,7 +173,8 @@ class SerialApp_Stage1(QMainWindow):
     def send_current_value(self):
         """Enviar el valor actual del slider"""
         value = self.value_slider.value()
-        self.serial_comm.send_single_value(value)
+        values_received = self.serial_comm.send_single_value(value)
+        self.read_data.append(f"Enviado: {values_received}")
     
     def toggle_auto_send(self, state):
         """Alternar envío automático"""

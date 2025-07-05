@@ -101,11 +101,12 @@ class SerialCommunicator(QObject):
                     self.serial_port.write(data_to_send.encode('utf-8'))
                     data_received = self.serial_port.readline()
                     data_decoded = data_received.decode('utf-8')
-                    print(data_decoded)
-                return True
+                    act_sep = data_decoded[1:].replace('\r\n','').split(',')
+                    print(act_sep)
+                return act_sep
             except Exception as e:
                 self.error_occurred.emit(f"Error enviando datos: {str(e)}")
-                return False
+                return ['-1', '-1', '-1', '-1', '-1', '-1']
         return False
     def send_single_value(self, value):
         """Enviar un solo valor por serial"""
